@@ -1,0 +1,158 @@
+const User = require("../model/demoModel");
+const bcrypt = require("bcrypt");
+
+async function hash(password) {
+  return await bcrypt.hash(password, 10);
+}
+
+
+async function validatePassword(plainPassword,hashedPassword) {
+    return await bcrypt.compare(plainPassword,hashedPassword)
+  }
+
+
+
+const insertUser = async (req, res) => {
+  try {
+    const { name, email, password, confirm_password } = req.body;
+    const hashedPassword = await hash(password, confirm_password);
+
+    const addUser = new User({
+      name,
+      email,
+      password: hashedPassword,
+      confirm_password: hashedPassword,
+    });
+
+    const result = await addUser.save();
+
+    if (!result) {
+      return res.status(500).json({
+        statusCode: 500,
+        message: "Data not added",
+      });
+    } else {
+      return res.status(200).json({
+        statusCode: 200,
+        message: "Data added successfully",
+        data: result,
+      });
+    }
+  } catch (error) {
+    console.log(error.message);
+  }
+};
+
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const checkUser = await User.findOne({ email });
+    if (!checkUser) {
+      return res.status(500).json({ message: "No user found" });
+    }
+     
+     
+    const matchPassword = await validatePassword(password,checkUser.password)
+
+    if (!matchPassword) {
+        return res.status(500).json({ message: "Email or Password not correct" });
+      }
+   console.log("matchPassword--->", matchPassword)
+
+
+
+    if (email != checkUser.email ) {
+      return res.status(500).json({ message: "Email or Password not correct" });
+    }
+
+    const result = await checkUser.save();
+    return res.status(200).json({
+      statusCode: 200,
+      message: "User login successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.log(error.message);
+  }
+};
+
+
+
+const updateUser = async (req, res) => {
+  try {
+    const _id = req.params.id;
+    const { name, email, password, confirm_password } = req.body;
+
+    const checkUser = await User.findOne({ _id });
+
+    if (!checkUser) {
+      return res.status(500).json({ message: "User not found" });
+    }
+
+    const updateUser = await User.findByIdAndUpdate(
+      { _id },
+      { $set: { name, email, password, confirm_password } }
+    );
+
+    if (!updateUser) {
+      return res.status(500).json({
+        statusCode: 500,
+        message: "User updation failed",
+      });
+    } else {
+      return res.status(200).json({
+        statusCode: 200,
+        message: "User updated!",
+        data: updateUser,
+      });
+    }
+  } catch (error) {
+    console.log(error.message);
+  }
+};
+
+const getUser = async (req, res) => {
+  try {
+    const findUser = await User.find();
+
+    if (!findUser) {
+      return res.status(500).json({ message: "Data not fetched" });
+    } else {
+      return res.status(200).json({
+        statusCode: 200,
+        message: "Data fetched successfully",
+        data: findUser,
+      });
+    }
+  } catch (error) {
+    console.log(error.message);
+  }
+};
+
+const deleteUser = async (req, res) => {
+  try {
+    const _id = req.params.id;
+
+    const deleteUser = await User.findByIdAndDelete({ _id });
+    if (!deleteUser) {
+      return res.status(500).json({ message: "Uswer deletion failed" });
+    } else {
+      return res.status(200).json({
+        statusCode: 200,
+        message: "User deleted successfully",
+        data: deleteUser,
+      });
+    }
+  } catch (error) {
+    console.log(error.message);
+  }
+};
+
+module.exports = {
+  insertUser,
+  updateUser,
+  getUser,
+  deleteUser,
+  loginUser
+};
