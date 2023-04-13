@@ -78,11 +78,69 @@ const loginUser = async (req, res) => {
 };
 
 
+const changePassword = async(req,res)=>{
+  try {
+    var _id = req.body._id;
+    const oldPassword = req.body.oldPassword
+    const newPassword = req.body.newPassword
+    const confirm_password = req.body.confirm_password
+    
+
+    const data = await User.findOne({_id})
+
+    if(!data){
+      return res.status(500).json({message:"no data found"})
+    }
+     
+    const validOldPassword = await validatePassword(oldPassword,data.password)
+    
+    if (!validOldPassword)
+    return res.status(409).json({
+        status: 409,
+        message: "Old passsword doesn't matched",
+    });
+   
+    const hashedPassword = await hash(newPassword)
+
+    
+
+    const response = await User.findOneAndUpdate(
+      {_id},
+      {$set:{password:hashedPassword,confirm_password:newPassword}}
+      )
+     
+      if (!response) {
+        return res.json({
+            status: 400,
+            message: "Bad request"
+        });
+    } else {
+        return res.json({
+            statusCode: 200,
+            message: "password change successfully",
+        });
+    }
+
+    
+  } catch (error) {
+    console.log(error.message)
+    
+  }
+}
+
+
+
+
+
+
+
 
 const updateUser = async (req, res) => {
   try {
     const _id = req.params.id;
     const { name, email, password, confirm_password } = req.body;
+
+    const hashedPassword = await hash(password,confirm_password)
 
     const checkUser = await User.findOne({ _id });
 
@@ -92,7 +150,7 @@ const updateUser = async (req, res) => {
 
     const updateUser = await User.findByIdAndUpdate(
       { _id },
-      { $set: { name, email, password, confirm_password } }
+      { $set: { name, email, password :hashedPassword, confirm_password: hashedPassword} }
     );
 
     if (!updateUser) {
@@ -114,7 +172,7 @@ const updateUser = async (req, res) => {
 
 const getUser = async (req, res) => {
   try {
-    const findUser = await User.find();
+    const findUser = await User.find().sort({createdAt:-1});
 
     if (!findUser) {
       return res.status(500).json({ message: "Data not fetched" });
@@ -136,7 +194,7 @@ const deleteUser = async (req, res) => {
 
     const deleteUser = await User.findByIdAndDelete({ _id });
     if (!deleteUser) {
-      return res.status(500).json({ message: "Uswer deletion failed" });
+      return res.status(500).json({ message: "User deletion failed" });
     } else {
       return res.status(200).json({
         statusCode: 200,
@@ -154,5 +212,6 @@ module.exports = {
   updateUser,
   getUser,
   deleteUser,
-  loginUser
+  loginUser,
+  changePassword
 };
