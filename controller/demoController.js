@@ -138,6 +138,28 @@ const loginUser = async (req, res) => {
   }
 };
 
+const userLogout = async (req, res) => {
+  try {
+      res.clearCookie("adminSession");
+      return res.status(200).json({
+          status: 200,
+          message: "User logout successfullly",
+      });
+  } catch {
+      console.log(error);
+      return res.status(500).json({
+          message: "Ooopsss!"
+      });
+  }
+}
+
+
+
+
+
+
+
+
 const changePassword = async (req, res) => {
   try {
     var _id = req.body._id;
@@ -268,4 +290,5 @@ module.exports = {
   deleteUser,
   loginUser,
   changePassword,
+  userLogout
 };
