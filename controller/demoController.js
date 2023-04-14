@@ -1,16 +1,17 @@
 const User = require("../model/demoModel");
 const bcrypt = require("bcrypt");
+const { generateToken } = require("../common/token");
+const joi = require("joi");
+const Joi = require("joi");
+const { use } = require("../routes/demoRouter");
 
 async function hash(password) {
   return await bcrypt.hash(password, 10);
 }
 
-
-async function validatePassword(plainPassword,hashedPassword) {
-    return await bcrypt.compare(plainPassword,hashedPassword)
-  }
-
-
+async function validatePassword(plainPassword, hashedPassword) {
+  return await bcrypt.compare(plainPassword, hashedPassword);
+}
 
 const insertUser = async (req, res) => {
   try {
@@ -43,104 +44,150 @@ const insertUser = async (req, res) => {
   }
 };
 
+// const loginUser = async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+
+//     const checkUser = await User.findOne({ email });
+//     if (!checkUser) {
+//       return res.status(500).json({ message: "No user found" });
+//     }
+
+//     const matchPassword = await validatePassword(password,checkUser.password)
+
+//     if (!matchPassword) {
+//         return res.status(500).json({ message: "Email or Password not correct" });
+//       }
+//    console.log("matchPassword--->", matchPassword)
+
+//     if (email != checkUser.email ) {
+//       return res.status(500).json({ message: "Email or Password not correct" });
+//     }
+
+//     const result = await checkUser.save();
+//     return res.status(200).json({
+//       statusCode: 200,
+//       message: "User login successfully",
+//       data: result,
+//     });
+//   } catch (error) {
+//     console.log(error.message);
+//   }
+// };
+
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const checkUser = await User.findOne({ email });
-    if (!checkUser) {
-      return res.status(500).json({ message: "No user found" });
+    const ValidationSchemas = Joi.object({
+      email: Joi.string()
+        .min(6)
+        .required()
+        .email()
+        .message("Must be a valid email address"),
+      password: Joi.string().required().min(6).message("Password is required!"),
+    });
+
+    const validation = ValidationSchemas.validate({
+      email: email,
+      password: password,
+    });
+    console.log("validation===>", validation);
+
+    if (validation.error) {
+      return res.status(422).send({
+        status: 422,
+        message: validation.error.details,
+      });
     }
-     
-     
-    const matchPassword = await validatePassword(password,checkUser.password)
 
-    if (!matchPassword) {
-        return res.status(500).json({ message: "Email or Password not correct" });
-      }
-   console.log("matchPassword--->", matchPassword)
+    const userDetail = await User.findOne({ email });
+    console.log("userDetails==>", userDetail);
 
-
-
-    if (email != checkUser.email ) {
-      return res.status(500).json({ message: "Email or Password not correct" });
+    if (!userDetail) {
+      return res.status(409).json({
+        status: 409,
+        message: "Email or password incorrect",
+      });
+    }
+    const isPasswordCheck = await validatePassword(
+      password,
+      userDetail.password
+    );
+    if (!isPasswordCheck) {
+      return res.status(422).json({
+        status: 422,
+        message: "Password not match",
+      });
     }
 
-    const result = await checkUser.save();
+    const token = await generateToken({
+      id: userDetail,
+    });
+
+    res.cookie("userSession", token, {
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    });
     return res.status(200).json({
-      statusCode: 200,
+      status: 200,
       message: "User login successfully",
-      data: result,
+      token: token,
     });
   } catch (error) {
     console.log(error.message);
   }
 };
 
-
-const changePassword = async(req,res)=>{
+const changePassword = async (req, res) => {
   try {
     var _id = req.body._id;
-    const oldPassword = req.body.oldPassword
-    const newPassword = req.body.newPassword
-    const confirm_password = req.body.confirm_password
-    
+    const oldPassword = req.body.oldPassword;
+    const newPassword = req.body.newPassword;
+    const confirm_password = req.body.confirm_password;
 
-    const data = await User.findOne({_id})
+    const data = await User.findOne({ _id });
 
-    if(!data){
-      return res.status(500).json({message:"no data found"})
+    if (!data) {
+      return res.status(500).json({ message: "no data found" });
     }
-     
-    const validOldPassword = await validatePassword(oldPassword,data.password)
-    
+
+    const validOldPassword = await validatePassword(oldPassword, data.password);
+
     if (!validOldPassword)
-    return res.status(409).json({
+      return res.status(409).json({
         status: 409,
         message: "Old passsword doesn't matched",
-    });
-   
-    const hashedPassword = await hash(newPassword)
+      });
 
-    
+    const hashedPassword = await hash(newPassword);
 
     const response = await User.findOneAndUpdate(
-      {_id},
-      {$set:{password:hashedPassword,confirm_password:newPassword}}
-      )
-     
-      if (!response) {
-        return res.json({
-            status: 400,
-            message: "Bad request"
-        });
+      { _id },
+      { $set: { password: hashedPassword, confirm_password: newPassword } }
+    );
+
+    if (!response) {
+      return res.json({
+        status: 400,
+        message: "Bad request",
+      });
     } else {
-        return res.json({
-            statusCode: 200,
-            message: "password change successfully",
-        });
+      return res.json({
+        statusCode: 200,
+        message: "password change successfully",
+      });
     }
-
-    
   } catch (error) {
-    console.log(error.message)
-    
+    console.log(error.message);
   }
-}
-
-
-
-
-
-
-
+};
 
 const updateUser = async (req, res) => {
   try {
     const _id = req.params.id;
     const { name, email, password, confirm_password } = req.body;
 
-    const hashedPassword = await hash(password,confirm_password)
+    const hashedPassword = await hash(password, confirm_password);
 
     const checkUser = await User.findOne({ _id });
 
@@ -150,7 +197,14 @@ const updateUser = async (req, res) => {
 
     const updateUser = await User.findByIdAndUpdate(
       { _id },
-      { $set: { name, email, password :hashedPassword, confirm_password: hashedPassword} }
+      {
+        $set: {
+          name,
+          email,
+          password: hashedPassword,
+          confirm_password: hashedPassword,
+        },
+      }
     );
 
     if (!updateUser) {
@@ -172,7 +226,7 @@ const updateUser = async (req, res) => {
 
 const getUser = async (req, res) => {
   try {
-    const findUser = await User.find().sort({createdAt:-1});
+    const findUser = await User.find().sort({ createdAt: -1 });
 
     if (!findUser) {
       return res.status(500).json({ message: "Data not fetched" });
@@ -213,5 +267,5 @@ module.exports = {
   getUser,
   deleteUser,
   loginUser,
-  changePassword
+  changePassword,
 };

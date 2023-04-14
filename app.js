@@ -11,6 +11,24 @@ app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({extended:true}))
 
 
+// for session create
+
+const session = require("express-session")
+
+app.use(
+    session({
+        secret:"hello",
+        resave: false,
+        saveUninitialized: true,
+        cookie: {maxAge : 60000},
+    })
+    );
+
+
+
+
+
+
 app.use("/api",demoRoutes)
 
 
