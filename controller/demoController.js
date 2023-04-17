@@ -16,6 +16,10 @@ async function validatePassword(plainPassword, hashedPassword) {
 const insertUser = async (req, res) => {
   try {
     const { name, email, password, confirm_password } = req.body;
+    // let image;
+    // if(req.file){
+    //   image = file.filename
+    // }
     const hashedPassword = await hash(password, confirm_password);
 
     const addUser = new User({
@@ -23,6 +27,7 @@ const insertUser = async (req, res) => {
       email,
       password: hashedPassword,
       confirm_password: hashedPassword,
+      image :req.file.filename
     });
 
     const result = await addUser.save();
@@ -156,10 +161,6 @@ const userLogout = async (req, res) => {
 
 
 
-
-
-
-
 const changePassword = async (req, res) => {
   try {
     var _id = req.body._id;
@@ -203,6 +204,10 @@ const changePassword = async (req, res) => {
     console.log(error.message);
   }
 };
+
+
+
+
 
 const updateUser = async (req, res) => {
   try {

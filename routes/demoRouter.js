@@ -1,9 +1,10 @@
 const express = require("express")
 const router = express.Router()
+const upload = require("../common/upload")
 
 const{insertUser,updateUser,getUser,deleteUser,loginUser,changePassword,userLogout} = require("../controller/demoController")
 
-router.post('/addUser',insertUser)
+router.post('/addUser', upload.single("image"),insertUser)
 
 router.post('/login',loginUser)
 router.get('/logOut', userLogout)
