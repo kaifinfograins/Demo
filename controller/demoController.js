@@ -16,10 +16,7 @@ async function validatePassword(plainPassword, hashedPassword) {
 const insertUser = async (req, res) => {
   try {
     const { name, email, password, confirm_password } = req.body;
-    // let image;
-    // if(req.file){
-    //   image = file.filename
-    // }
+    
     const hashedPassword = await hash(password, confirm_password);
 
     const addUser = new User({
